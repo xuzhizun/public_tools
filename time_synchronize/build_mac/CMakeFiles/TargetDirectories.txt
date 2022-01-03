@@ -1,0 +1,6 @@
+/Users/xuzhizun/Git_ws/datacollect/tools/build_mac/CMakeFiles/rebuild_cache.dir
+/Users/xuzhizun/Git_ws/datacollect/tools/build_mac/CMakeFiles/edit_cache.dir
+/Users/xuzhizun/Git_ws/datacollect/tools/build_mac/CMakeFiles/synchronize_single.dir
+/Users/xuzhizun/Git_ws/datacollect/tools/build_mac/CMakeFiles/synchronize_stereo_no_nav.dir
+/Users/xuzhizun/Git_ws/datacollect/tools/build_mac/CMakeFiles/synchronize_no_nav.dir
+/Users/xuzhizun/Git_ws/datacollect/tools/build_mac/CMakeFiles/synchronize_stereo.dir

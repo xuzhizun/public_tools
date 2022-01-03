@@ -1,0 +1,4 @@
+/Users/xuzhizun/Documents/datacollect/tools/build/CMakeFiles/rebuild_cache.dir
+/Users/xuzhizun/Documents/datacollect/tools/build/CMakeFiles/edit_cache.dir
+/Users/xuzhizun/Documents/datacollect/tools/build/CMakeFiles/synchronize_stereo.dir
+/Users/xuzhizun/Documents/datacollect/tools/build/CMakeFiles/synchronize_single.dir
