@@ -45,7 +45,16 @@
  * This function is called from main() whenever the program exits,
  * either in consequence of an error or after normal termination.
  */
+	bool acquisitionContinue = true;
 void wait_for_enter();
+
+void key_interrupt()
+{
+
+    std::cout << "Press enter to exit." << std::endl;
+    system("read _");
+    acquisitionContinue = false;
+}
 
 int main(int argc, char** argv)
 {
@@ -163,10 +172,6 @@ int main(int argc, char** argv)
             // wait until the UserSetLoad command has been finished
             nodeMapRemoteDevice->FindNode<peak::core::nodes::CommandNode>("UserSetLoad")->WaitUntilDone();
 
-	    if(exposure_setting)
-              nodeMapRemoteDevice->FindNode<peak::core::nodes::FloatNode>("ExposureTime")->SetValue(exposureTime);
-	    //set the exposure time
-
 	    if(frame_setting)
               nodeMapRemoteDevice->FindNode<peak::core::nodes::FloatNode>("AcquisitionFrameRate")->SetValue(frameRate);
 	    //set the framerate
@@ -220,9 +225,14 @@ int main(int argc, char** argv)
         //nodeMapRemoteDevice->FindNode<peak::core::nodes::FloatNode>("AcquisitionFrameRate")
         //   ->SetValue(std::min(10.0, frameRateMax));
 
-	//set frame rate to max value
+
+	    if(exposure_setting)
+              nodeMapRemoteDevice->FindNode<peak::core::nodes::FloatNode>("ExposureTime")->SetValue(exposureTime);
+			else
         nodeMapRemoteDevice->FindNode<peak::core::nodes::FloatNode>("AcquisitionFrameRate")
            ->SetValue(frameRateMax);
+	    //set the exposure time
+	//set frame rate to max value
 
         // define the number of images to acquire
 
@@ -239,7 +249,9 @@ int main(int argc, char** argv)
 	//create opencv image window
 	//cv::namedWindow("display", cv::WINDOW_AUTOSIZE);
 
-	bool acquisitionContinue = true;
+ std::thread t(key_interrupt);
+        t.detach();
+
         while (acquisitionContinue)
         {
             // get buffer from datastream and create IDS peak IPL image from it
@@ -258,12 +270,11 @@ int main(int argc, char** argv)
 
 						cv::imwrite(std::to_string(epoch_time)+".jpg", cvImage);
 
-
-
 	    //opencv show end
 
             // queue buffer
             dataStream->QueueBuffer(buffer);
+						std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         std::cout << std::endl << std::endl;
 
