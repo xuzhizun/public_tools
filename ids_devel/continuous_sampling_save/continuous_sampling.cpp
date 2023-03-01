@@ -254,15 +254,11 @@ int main(int argc, char** argv)
             int sizeBuffer = static_cast<int>(image.ByteCount());
             // Device buffer is being copied into cv::Mat array
             std::memcpy(cvImage.data, image.Data(), static_cast<size_t>(sizeBuffer));
-						long epoch_time = std::system_clock::duration<std::chrono::milliseconds>((std::chrono::system_clock::now()).time_since_epoch());
+						long epoch_time = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now()).time_since_epoch()).count();
 
 						cv::imwrite(std::to_string(epoch_time)+".jpg", cvImage);
 
-	    //cv::imshow("display", cvImage);
 
-	    char c = cv::waitKey(5);
-	    if(c =='q')
-		 acquisitionContinue = false;
 
 	    //opencv show end
 
