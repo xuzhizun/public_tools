@@ -46,6 +46,11 @@
 #include <list>
 #include <string>
 
+#include <fstream>
+#include <chrono>
+#include <ctime>
+#include <signal.h>
+
 Journaller* gJournal = 0;
 
 using namespace std;
@@ -98,6 +103,14 @@ private:
 	size_t m_numberOfPacketsInBuffer;
 	list<XsDataPacket> m_packetBuffer;
 };
+
+
+bool interrupt = false;
+void signal_callback_handler(int signum){
+  cout<<"Caught signal "<<signum<<endl;
+  interrupt = true;
+}
+
 
 //--------------------------------------------------------------------------------
 int main(void)
@@ -192,6 +205,19 @@ int main(void)
 	if (!device->setOutputConfiguration(configArray))
 		return handleError("Could not configure MTi device. Aborting.");
 
+  cout<<"Creating a text file..."<<endl;
+
+  time_t currTime = time(0);
+  char* dt = ctime(&currTime);
+  std::string date(dt,20);
+
+  ofstream file(date+"imu_data.txt");
+
+  if(file.is_open())
+    cout<<"created a text file: "+date+"imu_data.txt\n";
+  else
+    return handleError("Failed to create a text file. Aborting.");
+
 	cout << "Creating a log file..." << endl;
 	string logFileName = "logfile.mtb";
 	if (device->createLogFile(logFileName) != XRV_OK)
@@ -207,12 +233,12 @@ int main(void)
 	if (!device->startRecording())
 		return handleError("Failed to start recording. Aborting.");
 
-	cout << "\nMain loop. Recording data for 10 seconds." << endl;
-	cout << string(79, '-') << endl;
-
 	int64_t startTime = XsTime::timeStampNow();
 	//while (XsTime::timeStampNow() - startTime <= 10000)
-	while (true)
+  //
+  signal(SIGINT, signal_callback_handler);
+
+	while (true && !interrupt)
 	{
 		if (callback.packetAvailable())
 		{
@@ -220,6 +246,14 @@ int main(void)
 
 			// Retrieve a packet
 			XsDataPacket packet = callback.getNextPacket();
+
+      auto epoch_time = std::chrono::system_clock::now().time_since_epoch();
+
+      long time_stamp = std::chrono::duration_cast<std::chrono::milliseconds>(epoch_time).count();
+
+      //record time stamp 
+      file <<time_stamp;
+
 			if (packet.containsCalibratedData())
 			{
 				XsVector acc = packet.calibratedAcceleration();
@@ -237,6 +271,17 @@ int main(void)
 				cout << " |Mag X:" << mag[0]
 					<< ", Mag Y:" << mag[1]
 					<< ", Mag Z:" << mag[2];
+
+        //record data in text file
+        file <<" "<< "Acc X:" << acc[0]
+					<< ", Acc Y:" << acc[1]
+					<< ", Acc Z:" << acc[2]
+				  << " |Gyr X:" << gyr[0]
+					<< ", Gyr Y:" << gyr[1]
+					<< ", Gyr Z:" << gyr[2]
+				  << " |Mag X:" << mag[0]
+					<< ", Mag Y:" << mag[1]
+					<< ", Mag Z:" << mag[2];
 			}
 
 			if (packet.containsOrientation())
@@ -250,6 +295,15 @@ int main(void)
 
 				XsEuler euler = packet.orientationEuler();
 				cout << " |Roll:" << euler.roll()
+					<< ", Pitch:" << euler.pitch()
+					<< ", Yaw:" << euler.yaw();
+
+        //record data in text file
+        file <<" " << "|q0:" << quaternion.w()
+					<< ", q1:" << quaternion.x()
+					<< ", q2:" << quaternion.y()
+					<< ", q3:" << quaternion.z()
+				  << " |Roll:" << euler.roll()
 					<< ", Pitch:" << euler.pitch()
 					<< ", Yaw:" << euler.yaw();
 			}
@@ -271,13 +325,12 @@ int main(void)
 					<< ", N:" << vel[1]
 					<< ", U:" << vel[2];
 			}
-			
+
+      file<<"\n";
 			cout << flush;
 		}
 		XsTime::msleep(0);
 	}
-	cout << "\n" << string(79, '-') << "\n";
-	cout << endl;
 
 	cout << "Stopping recording..." << endl;
 	if (!device->stopRecording())
@@ -292,6 +345,9 @@ int main(void)
 
 	cout << "Freeing XsControl object..." << endl;
 	control->destruct();
+
+  //close file
+  file.close();
 
 	cout << "Successful exit." << endl;
 
