@@ -18,6 +18,7 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sstream> // for converting the command line parameter to integer
+#include <csignal>
 
 
 std::shared_ptr<peak::core::Device> device = nullptr;
@@ -32,6 +33,7 @@ cv::Mat camAcquisition();
 void camAcquisitionStop();
 void camClose();
 void keywait();
+void signal_callback(int signum);
 
 int main(int argc, char** argv)
 {
@@ -49,32 +51,38 @@ int main(int argc, char** argv)
 
   image_transport::Publisher pub = it.advertise("ids_cam/image_raw", 1);
 
+  if(!ros::isShuttingDown())
+  {
 
-  initializeCam(serNO);
-  std::cout << "Camera Initialized" << std::endl;
-  camConfig(frameRate, exposureTime);
-  std::cout << "Camera Configured" << std::endl;
+    initializeCam(serNO);
+    std::cout << "Camera Initialized" << std::endl;
+    camConfig(frameRate, exposureTime);
+    std::cout << "Camera Configured" << std::endl;
 
-  std::cout << "Press enter to exit." << std::endl;
-  std::thread interrupt(keywait);
-  interrupt.detach();
+    ROS_INFO("Press enter to exit.");
+    std::thread interrupt(keywait);
+    interrupt.detach();
+  }
 
-  while (nh.ok()) {
-    cv::Mat imageCV = camAcquisition(); 
+  while (nh.ok()) 
+  {
+     cv::Mat imageCV = camAcquisition(); 
     // Check if grabbed frame is actually full with some content
-    if(!imageCV.empty()) {
+     if(!imageCV.empty()) 
+     {
       auto msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", imageCV).toImageMsg();
       pub.publish(msg);
-    }
+     }
 
     if(!continuousSample)
       break;
-
   }
 
   camAcquisitionStop();
 
   camClose();
+
+  return 0;
 }
 
 
@@ -89,9 +97,10 @@ void initializeCam(std::string serNo)
  
   if (deviceManager.Devices().empty())
   {
-      std::cout << "No camera found. Exiting program." << std::endl << std::endl;
+      ROS_ERROR("No camera found. Exiting program.");
       peak::Library::Close();
-      std::exit(0);
+      //std::exit(0);
+      ros::shutdown();
       //return 0;
   }
 
@@ -108,9 +117,10 @@ void initializeCam(std::string serNo)
 
   if(device == nullptr)
   {
-     std::cout<<"SerNO Wrong. Exiting program."<<std::endl;
+	  ROS_ERROR("SerNO Wrong. Exiting node.");
      peak::Library::Close();
-     std::exit(0);
+     //std::exit(0);
+     ros::shutdown();
   }
 
 
@@ -250,7 +260,7 @@ void camAcquisitionStop()
             // Some transport layers need no explicit acquisition stop of the datastream when starting its
             // acquisition with a finite number of images. Ignoring Errors due to that TL behavior.
 
-            std::cout << "WARNING: Ignoring that TL failed to stop acquisition on datastream." << std::endl;
+         ROS_ERROR("WARNING: Ignoring that TL failed to stop acquisition on datastream.");
         }
         nodeMapRemoteDevice->FindNode<peak::core::nodes::CommandNode>("AcquisitionStop")->Execute();
 
@@ -275,3 +285,4 @@ void keywait()
     system("read _");
     continuousSample = false;
 }
+
