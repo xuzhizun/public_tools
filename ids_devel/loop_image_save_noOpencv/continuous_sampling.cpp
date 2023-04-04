@@ -33,6 +33,7 @@
 #include <peak/peak.hpp>
 #include <peak_ipl/peak_ipl.hpp>
 
+#include <fstream>
 
 /*! \bief Wait for enter function
  *
@@ -41,7 +42,7 @@
  * This function is called from main() whenever the program exits,
  * either in consequence of an error or after normal termination.
  */
-	bool acquisitionContinue = true;
+bool acquisitionContinue = true;
 void wait_for_enter();
 
 void key_interrupt()
@@ -58,6 +59,13 @@ int main(int argc, char** argv)
     bool frame_setting = false;
     double exposureTime;
     double frameRate;
+
+    std::ofstream file("images_record.txt");
+
+    if(file.is_open())
+	std::cout<<"Created record file.\n";
+    else
+	std::cout<<"Fail creating file.\n";
 
     if(argc < 2)
     {
@@ -245,7 +253,7 @@ int main(int argc, char** argv)
 	//create opencv image window
 	//cv::namedWindow("display", cv::WINDOW_AUTOSIZE);
 
- std::thread t(key_interrupt);
+        std::thread t(key_interrupt);
         t.detach();
 
         while (acquisitionContinue)
@@ -262,7 +270,16 @@ int main(int argc, char** argv)
             //queue buffer
             dataStream->QueueBuffer(buffer);
 	    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	    peak::ipl::ImageWriter::WriteAsBMP("/tmp/"+std::to_string(epoch_time)+".bmp", image);
+	    peak::ipl::ImageWriter::WriteAsBMP("/tmp/"+std::to_string(epoch_time)+".bmp", image); //saving raw images
+
+	    //peak::ipl::ImageWriter::WriteAsJPG("/tmp/"+std::to_string(epoch_time)+".jpg", image); //saving images as jpg (compressed)
+	    //Quality set to 50%
+	    //peak::ipl::ImageWriter::JPEGParameter jpgParams;
+	    //jpgParams.Quality = 50;
+	    //peak::ipl::ImageWriter::WriteAsJPG("/tmp/"+std::to_string(epoch_time)+".jpg", image);
+	    //
+	    file << epoch_time <<" "<<std::to_string(epoch_time)+".bmp"<<std::endl;
+
         }
         std::cout << std::endl << std::endl;
 
@@ -298,6 +315,7 @@ int main(int argc, char** argv)
     wait_for_enter();
     // close library before exiting program
     peak::Library::Close();
+    file.close();
     return 0;
 }
 
